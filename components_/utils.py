@@ -2,6 +2,8 @@
 
 import os
 
+size_of_title_layer = 90
+
 def pause():
     ''' 
         Pause the program and wait for user input.
@@ -22,7 +24,7 @@ def header(text):
         Receive a text and format it to a header like in the console
     '''
     clean_screen() #clean the screen every time that this function is called
-    print('=' * 40)
-    print(text.center(40))
-    print('=' * 40)
+    print('=' * size_of_title_layer)
+    print(text.center(size_of_title_layer))
+    print('=' * size_of_title_layer)
 
