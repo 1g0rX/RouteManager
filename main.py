@@ -18,6 +18,7 @@ while True:
         
         case '2':
             components_.utils.header('SELL TICKETS')
+            components_.tickets_system.tickets_menu()
 
         case '3':
             components_.utils.header('')
