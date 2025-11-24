@@ -11,7 +11,7 @@ def load_lines():
     os.makedirs("data", exist_ok=True) # create the folder, if it aready exists, ignores
     # open the file to load data
     try:
-        with open('data/lines.txt', 'r') as file:
+        with open('data/lines.txt', 'a') as file:
             for text_line in file:
                 if text_line:
                     data = text_line.split(',')
