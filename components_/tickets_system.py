@@ -8,23 +8,18 @@ def load_reserves():
         Loads existing reservation lines from a file.
 
         Output format:
-            list[list[str]]: List where each element is a reservation: [id, date, time].
-            Example: [['R001', '2025-10-25', '14:00'], ...]
-"""
+            dict{1{date, time, [seats]}}
+            Example: {1: {'2025-10-25', '14:00', [7, 2, 4]}, ...}
+    """
     os.makedirs("data", exist_ok=True) # create the folder, if it aready exists, ignores
     reserves = dict()
     try:
-        with open("data/reserves.txt", 'a') as file:
+        with open("data/reserves.txt", 'r') as file:
             for text_line in file:
-                if text_line: # load info from the file, format: id, data, seats[]
-                    data = text_line.split(", ") # separator
-                    for i in data:
-                        if i == 0: # if it is 0, will create the dictionary
-                            reserves[data[0]] = {'date': data[1], 'seats': []}
-                        elif i == 1:
-                            pass # as we have already added the date, we do not need this
-                        else: #here we will add the seats to the list of the reserved seats
-                            reserves[data[0]]['seats'].append(data[i])
+                text_line = text_line.strip()
+                if text_line: # load info from the file, format: id, data, time, seats[]
+                    parts = text_line.split(",") # separator
+                    reserves[parts[0]] = {'date': parts[1], 'time': parts[2], 'seats': parts[3:]}
     except Exception as e:
         print(f"Error loading file: {e}")
     return reserves
@@ -37,52 +32,65 @@ def save_reserves(reserves):
         per line, using the ID as the key.
 
         File Output Format (per line):
-            ID, date1, date2, ..., time1, time2, ...
-
-        Args:
-            reserves (dict): A dictionary where keys are unique reservation IDs (str) 
-                            and values are dictionaries containing 'dates' (list of str) 
-                            and 'times' (list of str).
-            
-            Example Input Structure:
-                {'R001': {'dates': ['2025-10-25'], 'times': ['14:00', '16:00'], 'seats': [1, 2]}, ...}
-"""
+            ID, date, time, seat1, seat2, ...
+    """
     os.makedirs("data", exist_ok=True) # create the folder, if it aready exists, ignores
 
     try:
         with open("data/reserves.txt", 'w') as file:
             for id_line, info in reserves.items():
-                string_dates = ', '.join(info['dates'])
-                string_times = ', '.join(info['times'])
-                string_seats = ', '.join(info['seats'])
-                file.write(f"{id_line}, {string_dates}, {string_times}, {string_seats}")
+
+                seats = ','.join(info['seats']) # transforms the list into a string
+
+                file.write(f"{id_line},{info['date']},{info['time']},{seats}\n")
 
     except Exception as e:
         print(f"Error while writing on file: {e}")
 
-def draw_seats():
+def draw_seats(seats_list):
     '''
         Draw the seat in the terminal
     '''
     # as all the buses have 20 seats, there is no need to do code to create a matrix
-
-    seats = [["[1]", "[2]", "[4]", "[3]"], 
-             ["[5]", "[6]", "[8]", "[7]"], 
-             ["[9]", "[10]", "[12]", "[11]"],
-             ["[13]", "[14]", "[16]", "[15]"], 
-             ["[17]", "[18]", "[20]", "[19]"]]
+    seats = list()
+    seats_window = ['3', '7', '11', '15', '19']
+    seats_hall = ['4', '8', '12', '16', '20']
+    print(seats_list)
     
-    ###############################################################
-    # this funcion will receive a list of the seats sold. add a logic to mark the seats
-    ###############################################################
+    # first, we'll build a list of seats
+    for seat in range(1, 21):
+        seats.append(seat)
     
+    # now, we'll organize the seats, inverting the values to put the numbers in the window
+    for seat in seats:
+        if str(seat) in seats_window:
+            seats[seat - 1] = seat + 1
+        elif str(seat) in seats_hall:
+            seats[seat - 1] = seat - 1
 
-    print(seats)
+    # mark the sold tickets as 'X' and convert the list to str
+    for i in range(len(seats)):
+        seats[i] = str(seats[i])
+
+    for i in range(len(seats)):
+        if seats[i] in seats_list:
+            seats[i] = 'X'
+
+    # now, draw the matrix
+    print('-' * 20)
+    print("Window\tHall\t\tHall\tWindow")
+    for i in range(0, len(seats), 4):
+        print(f"[{seats[i]}]\t[{seats[i+1]}]\t\t[{seats[i+2]}]\t[{seats[i+3]}]")
+    print('-' * 20)
        
 
 def sell_tickets(lines):
     utils.header('SELL TICKETS TO A STATION')  
     reserves = load_reserves()
+
+    seats_list = list()
+
+
     print("Available lines and prices:")
     lines_management.list_lines(lines, 'no')
     ###############################################################
@@ -95,10 +103,15 @@ def sell_tickets(lines):
         utils.pause()
         utils.header('SELL TICKETS TO A STATION')
     else:
+
+        #catch the list from the reserves
+        if id_line in reserves.keys():
+            seats_list = reserves[id_line]['seats']
+
         utils.header("Select the date and time for your ticket")
         date = input("Input the date (DD/MM/YYYY): ")
         time = input("Input the time (HH:MM): ")
-        draw_seats()
+        draw_seats(seats_list)
         seat = input("Which seat do you want: ")
     ###############################################################
     # Insert the logic of choosing the seat according to matrix
@@ -108,44 +121,68 @@ def sell_tickets(lines):
     ###############################################################
         
         if id_line not in reserves.keys():
-            reserves[id_line] = {'dates': [date], 'times': [time], 'seats': [seat]}
+            reserves[id_line] = {'date': date, 'time': time, 'seats': [seat]}
         else:
-            if date not in reserves[id_line]['dates']:
-                reserves[id_line]['dates'].append(date)
-            if time not in reserves[id_line]['times']:
-                reserves[id_line]['times'].append(time)
-            if seat not in reserves[id_line]['seats']:
-                reserves[id_line]['seats'].append(seat)
+            reserves[id_line]['seats'].append(seat)
         save_reserves(reserves)
         print('Ticket sold successfully')
     ###############################################################
     # Insert the logic to check the date
     ###############################################################
  
-def avaliable_seats(lines, reserves):
+def available_seats(lines, reserves):
     """
         _Shows the available seats informing the city, date and time_
     """
     utils.header("VERIFY AVAILABLE SEATS")
     lines_management.list_lines(lines, 'no')
-    destination = input("Input the destination city: ")
-    date = input("Input the date (DD/MM/YYYY): ")
-    time = input("Input the time (HH:MM): ")
 
-    if destination not in lines.values():
+    available_lines = dict()
+
+    destination = input("Input the destination city: ")
+    city_found = False
+    for line_id, infos in lines.items():
+        if destination == infos['Destination']:
+            city_found = True
+            break
+    if not city_found:
         print("City not found!")
+        utils.pause()
         utils.header("TICKET MENU - YOUR BEST TICKET MANAGER")
         return
-    dates_list = list()
-    for info in reserves.values():
-        dates_list.append(info['dates'])
-    if date not in dates_list:
-        draw_seats()
-    else:
-        # verify if the time is any reserved, if it, send the seats to the draw_seats function
-        pass
 
+    date = input("Input the date (DD/MM/YYYY): ")
+    time_found = False
+    date_found = False
+    for line_id, infos in reserves.items():
+        if date == infos['date']:
+            date_found = True
+            break
+    if date_found: # if the date in reserves, check the time
+        time = input("Input the time (HH:MM): ")
+        for line_id, infos in reserves.items():
+            if time == infos['time']:
+                time_found = True
+                break
+        if time_found: # if true, search the id
+            for id_line, info in lines.items():
+                if destination == info['Destination']: 
+                    available_lines[id_line] = lines[id_line]
+    else: # if the date is not reserved, show a default bus
+        time = input("Input the time (HH:MM): ")
+        for id_line, info in lines.items():
+            if destination == info['Destination']: 
+                available_lines[id_line] = lines[id_line]
 
+    # now, show the lines available:
+    lines_management.list_lines(available_lines, 'yes')
+    print('-' * utils.size_of_title_layer)
+
+    ###############################################################
+    # add the sell funtion here
+    ###############################################################
+
+    
 
 def tickets_menu():
     '''
@@ -154,6 +191,7 @@ def tickets_menu():
     utils.header("TICKET MENU - YOUR BEST TICKET MANAGER")
     
     lines = lines_management.load_lines()
+    reserves = load_reserves()
 
     while True:
         print("1. Sell a ticket")
@@ -167,12 +205,14 @@ def tickets_menu():
             case "1":
                 utils.header('SELL A TICKET')  
                 sell_tickets(lines)
+                reserves = load_reserves()
             
             case "2":
-                pass
+                available_seats(lines, reserves)
+                utils.header("TICKET MENU - YOUR BEST TICKET MANAGER")
 
             case "3":
-                pass
+                draw_seats(['7', '9'])
 
             case "0":
                 break

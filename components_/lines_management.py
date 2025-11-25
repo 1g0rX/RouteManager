@@ -9,9 +9,13 @@ def load_lines():
     '''
     lines = dict()
     os.makedirs("data", exist_ok=True) # create the folder, if it aready exists, ignores
+
+    if not os.path.exists('data/lines.txt'): # verify if the file exists (i can't use a+)
+        return lines
+
     # open the file to load data
     try:
-        with open('data/lines.txt', 'a') as file:
+        with open('data/lines.txt', 'r') as file:
             for text_line in file:
                 if text_line:
                     data = text_line.split(',')
@@ -31,7 +35,7 @@ def save_lines(lines):
     try:
         with open('data/lines.txt', 'w') as file:
             for id, details in lines.items():
-                file.write(f"{id}, {details['Origin']}, {details['Destination']}, {details['Time']}, {details['Price']}")
+                file.write(f"{id},{details['Origin']},{details['Destination']},{details['Time']},{details['Price']}\n")
     except Exception as e:
         print(f"Could not open file: {e}") 
 
@@ -132,6 +136,7 @@ def list_lines(lines, show_header):
         for line_id , infos in lines.items():
             print(f"ID: {line_id} | Origin: {infos['Origin']} | Destination: {infos['Destination']} | Time: {infos['Time']} | Price: {'Price'}")
     print('-' * utils.size_of_title_layer)
+    utils.pause()
 
     
 
@@ -152,16 +157,20 @@ def manage_lines():
 
         match op:
             case '1':
-                create_line(lines) # call the function that creates lines and adds them into dictionary 
+                create_line(lines) # call the function that creates lines and adds them into dictionary
+                lines = load_lines()
             
             case '2':
                 edit_line(lines) # calls edit line with all existing infos in dict.
+                lines = load_lines()
             
             case '3':
                 remove_line(lines)
+                lines = load_lines()
             
             case '4':
                 list_lines(lines, 'yes')
+                utils.header('MANAGE LINES') # call the header function to format it as a heading screen 
 
             case '0':
                 break
