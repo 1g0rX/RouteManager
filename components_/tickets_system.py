@@ -3,7 +3,10 @@
 from . import utils, lines_management
 import os
 
-def load_reserves():
+# definition of the reserves file
+reserves_file = "data/reserves.txt"
+
+def load_reserves(file):
     """
         Loads existing reservation lines from a file.
 
@@ -14,7 +17,7 @@ def load_reserves():
     os.makedirs("data", exist_ok=True) # create the folder, if it aready exists, ignores
     reserves = dict()
     try:
-        with open("data/reserves.txt", 'r') as file:
+        with open(file, 'r') as file:
             for text_line in file:
                 text_line = text_line.strip()
                 if text_line: # load info from the file, format: id, data, time, seats[]
@@ -24,7 +27,7 @@ def load_reserves():
         print(f"Error loading file: {e}")
     return reserves
 
-def save_reserves(reserves):
+def save_reserves(reserves, file):
     """
         Saves the dictionary of reservation data to the file.
 
@@ -37,7 +40,7 @@ def save_reserves(reserves):
     os.makedirs("data", exist_ok=True) # create the folder, if it aready exists, ignores
 
     try:
-        with open("data/reserves.txt", 'w') as file:
+        with open(file, 'w') as file:
             for id_line, info in reserves.items():
 
                 seats = ','.join(info['seats']) # transforms the list into a string
@@ -96,7 +99,6 @@ def sell_tickets(lines):
     ###############################################################
     # Insert the logic to check the date
     ###############################################################
-    utils.pause()
     id_line = input("Input the ID of the line you want to sell tickets to: ")
     if id_line not in lines.keys():
         print("Invalid option")
@@ -107,25 +109,27 @@ def sell_tickets(lines):
         #catch the list from the reserves
         if id_line in reserves.keys():
             seats_list = reserves[id_line]['seats']
+        if len(seats_list ) == 20:
+            print("All seats are already sold!")
+            return
 
         utils.header("Select the date and time for your ticket")
         date = input("Input the date (DD/MM/YYYY): ")
         time = input("Input the time (HH:MM): ")
         draw_seats(seats_list)
         seat = input("Which seat do you want: ")
-    ###############################################################
-    # Insert the logic of choosing the seat according to matrix
-    ###############################################################
-    ###############################################################
-    # Insert the logic of marking a seat as sold
-    ###############################################################
+        while seat in seats_list:
+            print(f"Seat {seat} is not available, please choose another one: ")
+            seat = input("Which seat do you want: ")
         
         if id_line not in reserves.keys():
             reserves[id_line] = {'date': date, 'time': time, 'seats': [seat]}
         else:
             reserves[id_line]['seats'].append(seat)
-        save_reserves(reserves)
+        save_reserves(reserves, reserves_file)
         print('Ticket sold successfully')
+        utils.pause()
+        utils.header("TICKET MENU - YOUR BEST TICKET MANAGER")
     ###############################################################
     # Insert the logic to check the date
     ###############################################################
@@ -181,6 +185,26 @@ def available_seats(lines, reserves):
     ###############################################################
     # add the sell funtion here
     ###############################################################
+    #catch the list from the reserves
+    if id_line in reserves.keys():
+        seats_list = reserves[id_line]['seats']
+    if len(seats_list ) == 20:
+        print("All seats are already sold!")
+        return
+    draw_seats(seats_list)
+    seat = input("Which seat do you want: ")
+    while seat in seats_list:
+        print(f"Seat {seat} is not available, please choose another one: ")
+        seat = input("Which seat do you want: ")
+    
+    if id_line not in reserves.keys():
+        reserves[id_line] = {'date': date, 'time': time, 'seats': [seat]}
+    else:
+        reserves[id_line]['seats'].append(seat)
+    save_reserves(reserves, reserves_file)
+    print('Ticket sold successfully')
+    utils.pause()
+    utils.header("TICKET MENU - YOUR BEST TICKET MANAGER")
 
     
 
@@ -191,12 +215,12 @@ def tickets_menu():
     utils.header("TICKET MENU - YOUR BEST TICKET MANAGER")
     
     lines = lines_management.load_lines()
-    reserves = load_reserves()
+    reserves = load_reserves(reserves_file)
 
     while True:
         print("1. Sell a ticket")
         print("2. See available lines and prices")
-        print("3. Don't decided yet")
+        print("3. Load reserves from a file")
         print("0. Return to main menu")
 
         op = input("Insert a option: ")
@@ -205,14 +229,14 @@ def tickets_menu():
             case "1":
                 utils.header('SELL A TICKET')  
                 sell_tickets(lines)
-                reserves = load_reserves()
             
             case "2":
                 available_seats(lines, reserves)
                 utils.header("TICKET MENU - YOUR BEST TICKET MANAGER")
 
             case "3":
-                draw_seats(['7', '9'])
+                # read from a file
+                pass
 
             case "0":
                 break

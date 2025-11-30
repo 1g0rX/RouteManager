@@ -102,9 +102,9 @@ def edit_line(lines):
         if time != '':
             lines[id_option]['Time'] = time
 
-        price = float(input("Input price: R$"))
-        if not price:
-         lines[id_option]['Price'] = price
+        price = input("Input price: R$")
+        if price != "":
+         lines[id_option]['Price'] = float(price)
             
 
 def remove_line(lines):
@@ -120,6 +120,7 @@ def remove_line(lines):
             return
         id_line = input('Insert a valid id or 0 for cancel: ')
     removed_line = lines.pop(id_line) # remove selected ID and infos about it (origin, destination)
+    save_lines(lines)
     print(f"Line {removed_line} removed successfully")
 
 def list_lines(lines, show_header):
@@ -134,7 +135,7 @@ def list_lines(lines, show_header):
         utils.pause()
     else:
         for line_id , infos in lines.items():
-            print(f"ID: {line_id} | Origin: {infos['Origin']} | Destination: {infos['Destination']} | Time: {infos['Time']} | Price: {'Price'}")
+            print(f"ID: {line_id} | Origin: {infos['Origin']} | Destination: {infos['Destination']} | Time: {infos['Time']} | Price: {infos['Price']}")
     print('-' * utils.size_of_title_layer)
     utils.pause()
 

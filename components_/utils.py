@@ -1,7 +1,7 @@
 # Some useful functions
 
 import os
-
+import platform
 size_of_title_layer = 90
 
 def pause():
@@ -13,11 +13,24 @@ def pause():
 
 
 def clean_screen():
-    '''
-        Clean the terminal before showing the next screen
-    '''
-    os.system('clear') # execute the 'clear' command to clean the terminal. GNU/Linux only
+    """
+    Clean the terminal before showing the next screen
+    """
+    
+    # Get the S.O name
+    os_name = platform.system()
+    if os_name == "Windows":
+    
+        command = 'cls'
+    elif os_name in ["Linux", "Darwin"]:
 
+        command = 'clear'
+    else:
+        # For others operation systems
+        print("Unknown Operational System")
+        return 
+        
+    os.system(command)
 
 def header(text):
     '''
