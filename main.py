@@ -21,7 +21,7 @@ while True:
             components_.tickets_system.tickets_menu()
 
         case '3':
-            components_.utils.header('')
+             components_.reports.reports_menu()
         
         case '0':
             print('Exiting...')
