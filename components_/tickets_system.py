@@ -4,7 +4,7 @@ from . import utils, lines_management
 import os
 from datetime import datetime, timedelta
 
-message = ''
+message = '' # to be used in some functions (I know that doing this is not a good practice)
 
 # definition of the reserves file
 reserves_file = "data/reserves.txt"
