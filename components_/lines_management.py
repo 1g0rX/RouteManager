@@ -104,7 +104,8 @@ def edit_line(lines):
 
         price = input("Input price: R$")
         if price != "":
-         lines[id_option]['Price'] = float(price)
+          lines[id_option]['Price'] = float(price)
+        save_lines(lines)
             
 
 def remove_line(lines):
@@ -115,10 +116,10 @@ def remove_line(lines):
     list_lines(lines, 'no')
     id_line = '-1'
     while id_line not in lines.keys():
-        if id_line == 0:
+        if id_line == '0':
             print("Operation canceled succesfully")
             return
-        id_line = input('Insert a valid id or 0 for cancel: ')
+        id_line = input('Insert a valid id or type 0 to cancel: ')
     removed_line = lines.pop(id_line) # remove selected ID and infos about it (origin, destination)
     save_lines(lines)
     print(f"Line {removed_line} removed successfully")

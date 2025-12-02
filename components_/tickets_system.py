@@ -38,26 +38,35 @@ def load_reserves(file=reserves_file):
                 text_line = text_line.strip()
                 if text_line: 
                      # parts[0] = id, parts[1] = date, parts[2] = time, parts[3:] = seats
-                    parts = text_line.split(",") 
+                    raw_parts = text_line.split(",")
+                    # Clean all parts to ensure matching works correctly
+                    parts = [p.strip() for p in raw_parts]
                 
-                    
                     id_line = parts[0]
-                    # now, we will creat the scructure to be used for the reservations
-                    if len(parts) > 3:
-                     
-                     entry = {
-                        'date': parts[1], 'time': parts[2],  'seats': parts[3:]
-                    }
-                    else:
-                         entry = {'seats': []}
                     
-                    
-                    # If the line ID is not in the dictionary, create a list for it
-                    if id_line not in reserves:
-                        reserves[id_line] = []
-                    
-                    # Add this specific trip to the list of trips for this line
-                    reserves[id_line].append(entry)
+                    # Ensure we have date and time even if no seats
+                    if len(parts) >= 3:
+                        date = parts[1]
+                        time = parts[2]
+                        
+                        # standard if/else structure as requested
+                        if len(parts) > 3:
+                            seats = parts[3:]
+                        else:
+                            seats = []
+                        
+                        entry = {
+                            'date': date, 
+                            'time': time,  
+                            'seats': seats
+                        }
+                         
+                        # If the line ID is not in the dictionary, create a list for it
+                        if id_line not in reserves:
+                            reserves[id_line] = []
+                        
+                        # Add this specific trip to the list of trips for this line
+                        reserves[id_line].append(entry)
                     
     except Exception as e:
         print(f"Error loading file: {e}")
@@ -78,9 +87,9 @@ def save_reserves(reserves, file=reserves_file):
                     seats = ','.join(trip['seats']) 
                     # If there are seats, add a comma before them, otherwise empty string
                     if seats:
-                        seats_str = f", {seats}"  
+                        seats_str = f",{seats}"  
                     else:
-                        seats_str = ""
+                        seats_str = "" 
                     f.write(f"{id_line},{trip['date']},{trip['time']}{seats_str}\n")
 
     except Exception as e:
@@ -89,7 +98,7 @@ def save_reserves(reserves, file=reserves_file):
 def validate_date_time(date_str, time_str):
     """
     Validates if the date and time are valid for reservation.
-    Returns (True, message) if valid, or (False, error_reason) if invalid.
+    Returns (True) if valid, or (False) if invalid, and change the message global variable, (true or error cause if false).
     Rules:
     1. Date must be within the next 30 days.
     2. Bus cannot have already departed.
@@ -173,8 +182,8 @@ def batch_reservation(lines, reserves):
                 # 1. Find Line ID based on City and Time
                 found_id = None
                 for line_id, info in lines.items():
-                    # Check destination and time
-                    if info['Destination'].lower() == city.lower() and info['Time'] == time:
+                    # Check destination OR origin (as requested), and then check time
+                    if (info['Destination'].lower() == city.lower() or info['Origin'].lower() == city.lower()) and info['Time'] == time:
                         found_id = line_id
                         break
                 
@@ -283,7 +292,11 @@ def sell_tickets(lines):
     print("Available lines and prices:")
     lines_management.list_lines(lines, 'no')
     
-    id_line = input("Input the ID of the line you want to sell tickets to: ")
+    id_line = input("Input the ID of the line you want to sell tickets to or type 0 to cancel: ")
+
+    if id_line == '0':
+            print("Operation canceled successfully")
+            return
     
     if id_line not in lines.keys():
         print("Invalid option")
@@ -484,8 +497,9 @@ def tickets_menu():
     reserves = load_reserves(reserves_file)
 
     while True:
-        print("1. Sell a ticket")
+        print("1. Buy a ticket")
         print("2. See available seats")
+        #-------------------------------------------
         print("3. Batch processing (from file)")
         print("0. Return to main menu")
 

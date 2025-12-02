@@ -1,18 +1,55 @@
 from . import utils, lines_management, tickets_system
 from datetime import datetime
+import os
+
+
+def process_report_output(report_content, default_filename):
+    """Ask user where to save or display the report."""
+    
+    report_header = report_content.split('\n')[0]
+    utils.header(report_header)
+    
+    while True:
+        print("\nSelect output option:")
+        print("1. Show on screen")
+        print(f"2. Save to file ({default_filename})")
+        
+        choice = input("Option (1 or 2): ")
+        
+        if choice == '1':
+            print("\n" + report_content)
+            utils.pause()
+            break
+        elif choice == '2':
+            try:
+                with open(default_filename, 'w') as f:
+                    f.write(report_content)
+                print(f"\nReport saved at: {os.path.abspath(default_filename)}")
+                utils.pause()
+                break
+            except Exception as e:
+                print(f"Error saving file: {e}")
+                utils.pause()
+                break
+        else:
+            print("Invalid option. Try again.")
 
 def generate_revenue_report(lines, reserves):
-    """
-    Generates report: Total revenue collected in the current month for each line.
-    """
-    utils.header("MONTHLY REVENUE REPORT")
+    """Report: Total revenue per line for the current month."""
     
-    current_month = datetime.now().month
-    current_year = datetime.now().year
+    report_lines = ["MONTHLY REVENUE REPORT"]
     
-    print(f"Report for: {current_month}/{current_year}\n")
+    # Get date once to avoid inconsistencies
+    now = datetime.now()
+    current_month = now.month
+    current_year = now.year
+    
+    report_lines.append(f"Report for: {current_month:02d}/{current_year}\n")
     
     total_system_revenue = 0
+    
+    report_lines.append(f"{'ID':<5} | {'Route':<30} | {'Revenue':>12}")
+    report_lines.append("-" * 50)
     
     for line_id, info in lines.items():
         line_revenue = 0
@@ -21,77 +58,74 @@ def generate_revenue_report(lines, reserves):
             for trip in reserves[line_id]:
                 try:
                     trip_date = datetime.strptime(trip['date'], "%d/%m/%Y")
-                    # check if trip is in current month and year
+                    
                     if trip_date.month == current_month and trip_date.year == current_year:
                         seats_sold = len(trip['seats'])
-                        revenue = seats_sold * info['Price']
-                        line_revenue += revenue
+                        
+                        if 'Price' in info and isinstance(info['Price'], (int, float)):
+                            revenue = seats_sold * info['Price']
+                            line_revenue += revenue
+                        
                 except ValueError:
-                    continue # to skip invalid dates
+                    continue
         
-        print(f"ID: {line_id} | Route: {info['Origin']} -> {info['Destination']}")
-        print(f"Revenue: R$ {line_revenue:.2f}")
-        print("-" * 30)
+        route_str = f"{info['Origin']} -> {info['Destination']}"
+        report_lines.append(f"{line_id:<5} | {route_str:<30} | R$ {line_revenue:>10.2f}")
         
         total_system_revenue += line_revenue
         
-    print(f"\nTOTAL SYSTEM REVENUE: R$ {total_system_revenue:.2f}")
-    utils.pause()
+    report_lines.append("-" * 50)
+    report_lines.append(f"TOTAL SYSTEM REVENUE: R$ {total_system_revenue:.2f}")
+    return "\n".join(report_lines)
 
-    #####################################################################################
-    # In the function below, we're going to use a fstring formating that I'll write here
-    # to not foget, it's about reservate space in the table, i didn't use it before, but
-    # is very useful to align thing. ==> str(f"variable:<10{or some other number}")
-    #####################################################################################
 
 def generate_occupancy_report(lines, reserves):
-    """
-    Generates report: Average percentage occupancy for each line on each day of the week.
-    Displays a matrix.
-    """
-    utils.header("WEEKLY OCCUPANCY MATRIX")
+    """Report: Average occupancy per line for each weekday."""
     
-    # days of week (0=Monday, 6=Sunday)
+    report_lines = []
+    
     days_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     
-    print(f"{'Line ID':<10} {'Origin -> Dest':<30}", end="")
+    header_line = f"{'Line ID':<10} {'Origin -> Dest':<30}"
     for day in days_names:
-        print(f"{day:<8}", end="")
-    print("\n" + "=" * 100)
+        header_line += f"{day:<8}"
+    report_lines.append(header_line)
+    report_lines.append("=" * 100)
     
     for line_id, info in lines.items():
-        # Initialize stats for this line: {0: {'sold': 0, 'trips': 0}, 1: ...}
+        
+        # Stats per weekday
         weekly_stats = {i: {'sold': 0, 'trips': 0} for i in range(7)}
         
         if line_id in reserves:
             for trip in reserves[line_id]:
                 try:
                     trip_date = datetime.strptime(trip['date'], "%d/%m/%Y")
-                    weekday = trip_date.weekday() # 0-6
+                    weekday = trip_date.weekday()
                     
                     weekly_stats[weekday]['sold'] += len(trip['seats'])
                     weekly_stats[weekday]['trips'] += 1
                 except ValueError:
                     continue
 
-        # Print Line Info
         route_str = f"{info['Origin']} -> {info['Destination']}"
-        print(f"{line_id:<10} {route_str:<30}", end="")
+        line_output = f"{line_id:<10} {route_str:<30}"
+        daily_occupancy_strings = []
         
-        # Calculate and print stats per day
         for i in range(7):
             stats = weekly_stats[i]
+            
             if stats['trips'] > 0:
-                # Max capacity is 20 per trip
                 total_capacity = stats['trips'] * 20
                 occupancy_pct = (stats['sold'] / total_capacity) * 100
-                print(f"{occupancy_pct:6.1f}% ", end="")
+                daily_occupancy_strings.append(f'{occupancy_pct:.2f}%'.ljust(8))
             else:
-                print(f"{'N/A':<8}", end="")
-        print()
+                daily_occupancy_strings.append('N/A'.ljust(8))
         
-    print("\n")
-    utils.pause()
+        report_lines.append(line_output + "".join(daily_occupancy_strings))
+        
+    report_lines.append("=" * 100)
+    return "\n".join(report_lines)
 
 def reports_menu():
     lines = lines_management.load_lines()
@@ -106,9 +140,11 @@ def reports_menu():
         op = input("Select an option: ")
         
         if op == '1':
-            generate_revenue_report(lines, reserves)
+            report_content = generate_revenue_report(lines, reserves)
+            process_report_output(report_content, "revenue_report.txt")
         elif op == '2':
-            generate_occupancy_report(lines, reserves)
+            report_content = generate_occupancy_report(lines, reserves)
+            process_report_output(report_content, "occupancy_report.txt")
         elif op == '0':
             break
         else:
