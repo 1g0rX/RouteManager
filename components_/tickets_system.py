@@ -40,7 +40,9 @@ def load_reserves(file=reserves_file):
                      # parts[0] = id, parts[1] = date, parts[2] = time, parts[3:] = seats
                     raw_parts = text_line.split(",")
                     # Clean all parts to ensure matching works correctly
-                    parts = [p.strip() for p in raw_parts]
+                    for p in raw_parts:
+                        parts = p.strip()
+                    
                 
                     id_line = parts[0]
                     
@@ -61,11 +63,11 @@ def load_reserves(file=reserves_file):
                             'seats': seats
                         }
                          
-                        # If the line ID is not in the dictionary, create a list for it
+                        # if the line ID is not in the dictionary, create a list for it
                         if id_line not in reserves:
                             reserves[id_line] = []
                         
-                        # Add this specific trip to the list of trips for this line
+                        # add this specific trip to the list of trips for this line
                         reserves[id_line].append(entry)
                     
     except Exception as e:
@@ -82,10 +84,10 @@ def save_reserves(reserves, file=reserves_file):
     try:
         with open(file, 'w') as f:
             for id_line, trips_list in reserves.items():
-                # trips_list is a list of dictionaries (each trip)
+                # trips_list is a list of dictionaries (each trip) id: [{trip1}, {trip2}...]
                 for trip in trips_list:
                     seats = ','.join(trip['seats']) 
-                    # If there are seats, add a comma before them, otherwise empty string
+                    # if there are seats, add a comma before them, otherwise empty string
                     if seats:
                         seats_str = f",{seats}"  
                     else:
@@ -106,18 +108,18 @@ def validate_date_time(date_str, time_str):
 
     global message # to change, in the code, the global variable
     try:
-        # Combine date and time strings into a datetime object
+        # combine date and time strings into a datetime object
         bus_datetime = datetime.strptime(f"{date_str} {time_str}", "%d/%m/%Y %H:%M")
         now = datetime.now()
         
-        # Check if the bus has already departed
+        # check if the bus has already departed
         if bus_datetime < now:
             message = "The bus has already departed."
             print(f"Error: {message}")
             return False
     
         
-        # Check if the date is more than 30 days from now
+        # check if the date is more than 30 days from now
         limit_date = now + timedelta(days=30)
         if bus_datetime > limit_date:
             message = "Reservations can only be made up to 30 days in advance."
@@ -179,7 +181,7 @@ def batch_reservation(lines, reserves):
                 date = parts[2].strip()
                 seat = parts[3].strip()
                 
-                # 1. Find Line ID based on City and Time
+                # First, find Line ID based on City and Time
                 found_id = None
                 for line_id, info in lines.items():
                     # Check destination OR origin (as requested), and then check time
@@ -192,14 +194,14 @@ def batch_reservation(lines, reserves):
                     errors_count += 1
                     continue
                 
-                # 2. Validate Date and Time rules
+                # Second, validate Date and Time rules
                 is_valid = validate_date_time(date, time)
                 if not is_valid:
                     log_error(message, line)
                     errors_count += 1
                     continue
 
-                # 3. check if the seat is available
+                # third, check if the seat is available
                 current_trip = None
                 if found_id in reserves:
                     for trip in reserves[found_id]:
@@ -207,7 +209,10 @@ def batch_reservation(lines, reserves):
                             current_trip = trip
                             break
                 
-                seats_taken = current_trip['seats'] if current_trip else []
+                if current_trip:
+                    seats_taken = current_trip['seats']
+                else:
+                    seats_taken = []
                 
                 if len(seats_taken) >= 20:
                     log_error("Bus is full", line)
@@ -225,7 +230,7 @@ def batch_reservation(lines, reserves):
                     errors_count += 1
                     continue
 
-                # 4. Success - Book it
+                # Finally, success - Book it
                 if current_trip:
                     current_trip['seats'].append(seat)
                 else:
@@ -236,7 +241,7 @@ def batch_reservation(lines, reserves):
                 
                 processed_count += 1
 
-        # Save changes
+        # Save changes (don't forget)
         save_reserves(reserves, reserves_file)
         print("\nBatch processing finished.")
         print(f"Successful reservations: {processed_count}")
@@ -268,7 +273,7 @@ def draw_seats(seats_list):
         elif str(seat) in seats_hall:
             seats[seat - 1] = seat - 1
 
-    # Convert to string to allow replacement with 'X'
+    # convert to string to allow replacement with 'X'
     display_seats = [str(s) for s in seats]
 
     # mark the sold tickets as 'X'
@@ -310,7 +315,7 @@ def sell_tickets(lines):
     # Here, we have a question, the bus have only one or more
     # schedules? 
     # As we already have the id, we'll assume that each line has
-    # only one fixed schedule
+    # only one fixed schedule, but we will still asking to confirm
     ###############################################################
 
     scheduled_time = lines[id_line]['Time']
@@ -322,13 +327,13 @@ def sell_tickets(lines):
         print("Warning: The time entered does not match the line schedule.")
         time = input("Confirm the time (HH:MM): ")
     
-    # Validate Date/Time Rules
+    # validate date and time rules
     is_valid = validate_date_time(date, time)
     if not is_valid:
         utils.pause()
         return
 
-    # Find the specific trip (Line + Date + Time)
+    # find the specific trip (Line + Date + Time)
     current_trip = None
     if id_line in reserves:
         for trip in reserves[id_line]:
@@ -362,7 +367,7 @@ def sell_tickets(lines):
              utils.pause()
              return
     
-    # Update logic
+
     if current_trip:
         current_trip['seats'].append(seat)
     else:
@@ -387,7 +392,7 @@ def available_seats(lines, reserves):
 
     destination = input("Input the destination city: ")
     
-    # Find matching lines for destination
+    # find matching lines for destination
     matching_line_ids = []
     for line_id, infos in lines.items():
         if destination.lower() == infos['Destination'].lower():
@@ -401,26 +406,25 @@ def available_seats(lines, reserves):
     date = input("Input the date (DD/MM/YYYY): ")
     time = input("Input the time (HH:MM): ")
     
-    # Validate Date/Time Rules (Optional here, since it's just checking availability, 
-    # but good to warn if user tries to buy)
+    # here, since it's just checking availability, but good to warn if user tries to buy
     is_valid = validate_date_time(date, time)
     if not is_valid:
         print(f"Note: {message}")
     
     found_lines = []
     
-    # Check availability
+    # check availability
     print(f"\n--- Results for {destination} on {date} at {time} ---")
     
     for id_line in matching_line_ids:
-        # Check if the schedule matches
+        # check if the schedule matches
         line_schedule_time = lines[id_line]['Time']
         
         if line_schedule_time == time:
             found_lines.append(id_line)
             print(f"\n> Line ID: {id_line} | Origin: {lines[id_line]['Origin']} | Price: R${lines[id_line]['Price']}")
             
-            # Check occupied seats
+            # check occupied seats
             seats_taken = []
             if id_line in reserves:
                 for trip in reserves[id_line]:
@@ -455,7 +459,7 @@ def available_seats(lines, reserves):
             
         seat_to_buy = input("Which seat do you want to reserve? ")
         
-        # Logic to validate and save
+        # here we'll implement the logic to validate and save
         current_trip = None
         if target_id in reserves:
             for trip in reserves[target_id]:
